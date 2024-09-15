@@ -59,14 +59,23 @@ set_environ_vars(char **eargv, int eargc)
 // Does it have to be closed after the execve(2) call?
 //
 // Hints:
-// - if O_CREAT is used, add S_IWUSR and S_IRUSR
+// - if O_CREAT, add S_IWUSR and S_IRUSR
 // 	to make it a readable normal file
 static int
 open_redir_fd(char *file, int flags)
 {
-	// Your code here
+	int fd;
+	if (flags & O_CREAT)
+		fd = open(file, flags, S_IRUSR | S_IWUSR);
+	else
+		fd = open(file, flags);
 
-	return -1;
+
+	if (fd < 0) {
+		perror(NULL);
+		exit(-1);
+	}
+	return fd;
 }
 
 // executes a command - does not return
@@ -115,10 +124,33 @@ exec_cmd(struct cmd *cmd)
 		// To check if a redirection has to be performed
 		// verify if file name's length (in the execcmd struct)
 		// is greater than zero
-		//
-		// Your code here
-		printf("Redirections are not yet implemented\n");
-		_exit(-1);
+		r = (struct execcmd *) cmd;
+
+		const pid_t pid = fork();
+		if (pid == 0) {
+			if (strlen(r->in_file) > 0) {
+				dup2(open_redir_fd(r->in_file, O_CREAT | O_CLOEXEC),
+				     STDIN_FILENO);
+			}
+
+			if (strlen(r->out_file) > 0) {
+				dup2(open_redir_fd(r->out_file,
+				                   O_CREAT | O_CLOEXEC),
+				     STDOUT_FILENO);
+			}
+
+			if (strlen(r->err_file) > 0) {
+				dup2(open_redir_fd(r->err_file,
+				                   O_CREAT | O_CLOEXEC),
+				     STDERR_FILENO);
+			}
+
+			if (execvp(r->argv[0], r->argv) < 0) {
+				perror(NULL);
+				_exit(-1);
+			}
+		}
+		wait(NULL);
 		break;
 	}
 
@@ -126,6 +158,7 @@ exec_cmd(struct cmd *cmd)
 		// pipes two commands
 		//
 		// Your code here
+		p = (struct pipecmd *) cmd;
 		printf("Pipes are not yet implemented\n");
 
 		// free the memory allocated
