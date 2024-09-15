@@ -86,11 +86,18 @@ exec_cmd(struct cmd *cmd)
 
 	switch (cmd->type) {
 	case EXEC:
-		// spawns a command
-		//
-		// Your code here
-		printf("Commands are not yet implemented\n");
-		_exit(-1);
+		e = (struct execcmd *) cmd;
+
+		const pid_t pid = fork();
+		if (pid == 0) {
+			if (execvp(e->argv[0], e->argv) < 0) {
+				perror(NULL);
+				_exit(-1);
+			}
+		}
+
+		wait(NULL);
+
 		break;
 
 	case BACK: {
