@@ -103,6 +103,9 @@ exec_cmd(struct cmd *cmd)
 				perror(NULL);
 				_exit(-1);
 			}
+		} else if (pid < 0) {
+			perror(NULL);
+			_exit(-1);
 		}
 
 		wait(NULL);
@@ -128,28 +131,38 @@ exec_cmd(struct cmd *cmd)
 
 		const pid_t pid = fork();
 		if (pid == 0) {
-			if (strlen(r->in_file) > 0) {
-				dup2(open_redir_fd(r->in_file, O_CREAT | O_CLOEXEC),
+			if (strlen(r->in_file) > 0)
+				dup2(open_redir_fd(r->in_file,
+				                   O_RDONLY | O_CLOEXEC),
 				     STDIN_FILENO);
-			}
 
-			if (strlen(r->out_file) > 0) {
+
+			if (strlen(r->out_file) > 0)
 				dup2(open_redir_fd(r->out_file,
-				                   O_CREAT | O_CLOEXEC),
+				                   O_WRONLY | O_CREAT |
+				                           O_TRUNC | O_CLOEXEC),
 				     STDOUT_FILENO);
-			}
 
-			if (strlen(r->err_file) > 0) {
+
+			if (strlen(r->err_file) > 0)
 				dup2(open_redir_fd(r->err_file,
-				                   O_CREAT | O_CLOEXEC),
+				                   O_WRONLY | O_CREAT |
+				                           O_TRUNC | O_CLOEXEC),
 				     STDERR_FILENO);
-			}
+			// else if (strlen(r->out_file) > 0) {
+			// dup2(STDOUT_FILENO, STDERR_FILENO);
+			// }
 
 			if (execvp(r->argv[0], r->argv) < 0) {
 				perror(NULL);
 				_exit(-1);
 			}
+
+		} else if (pid < 0) {
+			perror(NULL);
+			_exit(-1);
 		}
+
 		wait(NULL);
 		break;
 	}
