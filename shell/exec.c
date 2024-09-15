@@ -144,14 +144,16 @@ exec_cmd(struct cmd *cmd)
 				     STDOUT_FILENO);
 
 
-			if (strlen(r->err_file) > 0)
-				dup2(open_redir_fd(r->err_file,
-				                   O_WRONLY | O_CREAT |
-				                           O_TRUNC | O_CLOEXEC),
-				     STDERR_FILENO);
-			// else if (strlen(r->out_file) > 0) {
-			// dup2(STDOUT_FILENO, STDERR_FILENO);
-			// }
+			if (strlen(r->err_file) > 0) {
+				if (strcmp(r->err_file, "&1") == 0)
+					dup2(STDOUT_FILENO, STDERR_FILENO);
+				else
+					dup2(open_redir_fd(r->err_file,
+					                   O_WRONLY | O_CREAT |
+					                           O_TRUNC |
+					                           O_CLOEXEC),
+					     STDERR_FILENO);
+			}
 
 			if (execvp(r->argv[0], r->argv) < 0) {
 				perror(NULL);
@@ -172,6 +174,15 @@ exec_cmd(struct cmd *cmd)
 		//
 		// Your code here
 		p = (struct pipecmd *) cmd;
+		int fds[2];
+
+		const pid_t pid1 = fork();
+		if (pid1 == 0) {
+			close(fds[0]);
+			dup2(fds[1], STDOUT_FILENO);
+			close(fd[1])
+		}
+
 		printf("Pipes are not yet implemented\n");
 
 		// free the memory allocated
