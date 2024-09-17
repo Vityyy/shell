@@ -1,5 +1,9 @@
 #include "exec.h"
 
+#define IN_FILE_FLAGS O_RDONLY | O_CLOEXEC
+#define OUT_FILE_FLAGS O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC
+#define ERR_FILE_FLAGS O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC
+
 // sets "key" with the key part of "arg"
 // and null-terminates it
 //
@@ -59,7 +63,7 @@ set_environ_vars(char **eargv, int eargc)
 // Does it have to be closed after the execve(2) call?
 //
 // Hints:
-// - if O_CREAT, add S_IWUSR and S_IRUSR
+// - if O_CREAT is used, add S_IWUSR and S_IRUSR
 // 	to make it a readable normal file
 static int
 open_redir_fd(char *file, int flags)
@@ -70,12 +74,30 @@ open_redir_fd(char *file, int flags)
 	else
 		fd = open(file, flags);
 
-
 	if (fd < 0) {
 		perror(NULL);
 		exit(-1);
 	}
+
 	return fd;
+}
+
+void
+perform_redirections(char *in_file, char *out_file, char *err_file)
+{
+	if (strlen(in_file) > 0)
+		_dup2(open_redir_fd(in_file, IN_FILE_FLAGS), STDIN_FILENO);
+
+	if (strlen(out_file) > 0)
+		_dup2(open_redir_fd(out_file, OUT_FILE_FLAGS), STDOUT_FILENO);
+
+	if (strlen(err_file) > 0) {
+		if (strcmp(err_file, "&1") == 0)
+			_dup2(STDOUT_FILENO, STDERR_FILENO);
+		else
+			_dup2(open_redir_fd(err_file, ERR_FILE_FLAGS),
+			      STDERR_FILENO);
+	}
 }
 
 // executes a command - does not return
@@ -94,23 +116,18 @@ exec_cmd(struct cmd *cmd)
 	struct pipecmd *p;
 
 	switch (cmd->type) {
-	case EXEC:
+	case EXEC: {
 		e = (struct execcmd *) cmd;
 
-		const pid_t pid = fork();
-		if (pid == 0) {
-			if (execvp(e->argv[0], e->argv) < 0) {
-				perror(NULL);
-				_exit(-1);
-			}
-		} else if (pid < 0) {
-			perror(NULL);
-			_exit(-1);
-		}
+		// const pid_t pid = _fork();
+		// if (pid == 0)
+		// 	_execvp(e->argv[0], e->argv);
+		// _wait(NULL);
 
-		wait(NULL);
+		_execvp(e->argv[0], e->argv);
 
 		break;
+	}
 
 	case BACK: {
 		// runs a command in background
@@ -129,93 +146,51 @@ exec_cmd(struct cmd *cmd)
 		// is greater than zero
 		r = (struct execcmd *) cmd;
 
-		const pid_t pid = fork();
-		if (pid == 0) {
-			if (strlen(r->in_file) > 0)
-				dup2(open_redir_fd(r->in_file,
-				                   O_RDONLY | O_CLOEXEC),
-				     STDIN_FILENO);
+		// const pid_t pid = _fork();
+		// if (pid == 0) {
+		// 	perform_redirections(r->in_file, r->out_file,
+		// r->err_file); 	_execvp(r->argv[0], r->argv);
+		// }
+		// _wait(NULL);
 
+		perform_redirections(r->in_file, r->out_file, r->err_file);
+		_execvp(r->argv[0], r->argv);
 
-			if (strlen(r->out_file) > 0)
-				dup2(open_redir_fd(r->out_file,
-				                   O_WRONLY | O_CREAT |
-				                           O_TRUNC | O_CLOEXEC),
-				     STDOUT_FILENO);
-
-
-			if (strlen(r->err_file) > 0) {
-				if (strcmp(r->err_file, "&1") == 0)
-					dup2(STDOUT_FILENO, STDERR_FILENO);
-				else
-					dup2(open_redir_fd(r->err_file,
-					                   O_WRONLY | O_CREAT |
-					                           O_TRUNC |
-					                           O_CLOEXEC),
-					     STDERR_FILENO);
-			}
-
-			if (execvp(r->argv[0], r->argv) < 0) {
-				perror(NULL);
-				_exit(-1);
-			}
-
-		} else if (pid < 0) {
-			perror(NULL);
-			_exit(-1);
-		}
-
-		wait(NULL);
 		break;
 	}
 
 	case PIPE: {
 		p = (struct pipecmd *) cmd;
 
-
 		int fds[2];
-		pipe(fds);
+		_pipe(fds);
 
-		const pid_t pid1 = fork();
+		const pid_t pid1 = _fork();
 		if (pid1 == 0) {
-			close(fds[0]);
-			dup2(fds[1], STDOUT_FILENO);
-			close(fds[1]);
-
-			if (execvp(((struct execcmd *) p->leftcmd)->argv[0],
-			           ((struct execcmd *) p->leftcmd)->argv) < 0) {
-				perror(NULL);
-				_exit(-1);
-			}
-		} else if (pid1 < 0) {
-			perror(NULL);
-			_exit(-1);
+			_close(fds[0]);
+			_dup2(fds[1], STDOUT_FILENO);
+			_close(fds[1]);
+			_execvp(((struct execcmd *) p->leftcmd)->argv[0],
+			        ((struct execcmd *) p->leftcmd)->argv);
 		}
-
-		const pid_t pid2 = fork();
+		const pid_t pid2 = _fork();
 		if (pid2 == 0) {
-			close(fds[1]);
-			dup2(fds[0], STDIN_FILENO);
-			close(fds[0]);
-
-			if (execvp(((struct execcmd *) p->rightcmd)->argv[0],
-			           ((struct execcmd *) p->rightcmd)->argv) < 0) {
-				perror(NULL);
-				_exit(-1);
-			}
-
-		} else if (pid2 < 0) {
-			perror(NULL);
-			_exit(-1);
+			_close(fds[1]);
+			_dup2(fds[0], STDIN_FILENO);
+			_close(fds[0]);
+			_execvp(((struct execcmd *) p->rightcmd)->argv[0],
+			        ((struct execcmd *) p->rightcmd)->argv);
 		}
 
-		close(fds[0]);
-		close(fds[1]);
+		_close(fds[0]);
+		_close(fds[1]);
 
-		waitpid(pid1, NULL, 0);
-		waitpid(pid2, NULL, 0);
+		_waitpid(pid1, NULL, 0);
+		_waitpid(pid2, NULL, 0);
+
 		// free the memory allocated
 		// for the pipe tree structure
+
 		// free_command(parsed_pipe);
 
 		break;

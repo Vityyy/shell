@@ -5,6 +5,7 @@
 #include "types.h"
 #include "utils.h"
 #include "freecmd.h"
+#include "wrappers.h"
 
 extern struct cmd *parsed_pipe;
 
