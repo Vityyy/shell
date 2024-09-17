@@ -167,23 +167,23 @@ exec_cmd(struct cmd *cmd)
 
 		const pid_t pid1 = _fork();
 		if (pid1 == 0) {
-			_close(fds[0]);
-			_dup2(fds[1], STDOUT_FILENO);
-			_close(fds[1]);
+			_close(fds[READ]);
+			_dup2(fds[WRITE], STDOUT_FILENO);
+			_close(fds[WRITE]);
 			_execvp(((struct execcmd *) p->leftcmd)->argv[0],
 			        ((struct execcmd *) p->leftcmd)->argv);
 		}
 		const pid_t pid2 = _fork();
 		if (pid2 == 0) {
-			_close(fds[1]);
-			_dup2(fds[0], STDIN_FILENO);
-			_close(fds[0]);
+			_close(fds[WRITE]);
+			_dup2(fds[READ], STDIN_FILENO);
+			_close(fds[READ]);
 			_execvp(((struct execcmd *) p->rightcmd)->argv[0],
 			        ((struct execcmd *) p->rightcmd)->argv);
 		}
 
-		_close(fds[0]);
-		_close(fds[1]);
+		_close(fds[READ]);
+		_close(fds[WRITE]);
 
 		_waitpid(pid1, NULL, 0);
 		_waitpid(pid2, NULL, 0);
