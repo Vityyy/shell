@@ -1,5 +1,7 @@
 #include "parsing.h"
 
+#include "printstatus.h"
+
 // parses an argument of the command stream input
 static char *
 get_token(char *buf, int idx)
@@ -101,8 +103,38 @@ parse_environ_var(struct execcmd *c, char *arg)
 static char *
 expand_environ_var(char *arg)
 {
-	// Your code here
+	if (arg[0] == '$') {
+		if (strcmp(arg + 1, "?") == 0) {
+			char status_str[10];
+			sprintf(status_str, "%d", status);
+			size_t status_len = strlen(status_str);
+			if (status_len > strlen(arg)) {
+				arg = realloc(arg, status_len + 1);
+			}
+			strcpy(arg, status_str);
 
+		} else {
+			char *var = getenv(arg + 1);
+
+			if (var) {
+				if (*var == 0) {
+					arg[0] = '\0';
+				} else {
+					size_t var_len = strlen(var);
+					if (var_len > strlen(arg))
+						arg = realloc(arg, var_len + 1);
+					strcpy(arg, var);
+				}
+
+				// size_t var_len = strlen(var);
+				// if (var_len > strlen(arg))
+				//	arg = realloc(arg, var_len + 1);
+				// strcpy(arg, var);
+			} else {
+				arg[0] = '\0';
+			}
+		}
+	}
 	return arg;
 }
 
@@ -134,7 +166,8 @@ parse_exec(char *buf_cmd)
 
 		tok = expand_environ_var(tok);
 
-		c->argv[argc++] = tok;
+		if (*tok != 0)
+			c->argv[argc++] = tok;
 	}
 
 	c->argv[argc] = (char *) NULL;
@@ -189,7 +222,14 @@ parse_line(char *buf)
 	char *right = split_line(buf, '|');
 
 	l = parse_cmd(buf);
-	r = parse_cmd(right);
+
+	int idx = block_contains(right, '|');
+
+	if (idx >= 0)
+		r = parse_line(right);
+	else
+		r = parse_cmd(right);
+
 
 	return pipe_cmd_create(l, r);
 }

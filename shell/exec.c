@@ -1,8 +1,20 @@
 #include "exec.h"
+#include <stdnoreturn.h>
 
 #define IN_FILE_FLAGS O_RDONLY | O_CLOEXEC
 #define OUT_FILE_FLAGS O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC
 #define ERR_FILE_FLAGS O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC
+
+/**
+ * * @param p * @param previous_read_fd
+ */
+noreturn void generate_pipeline(struct pipecmd *p, int previous_read_fd);
+
+/**
+ * * @param in_file
+ * @param out_file * @param err_file
+ */
+void perform_redirections(char *in_file, char *out_file, char *err_file);
 
 // sets "key" with the key part of "arg"
 // and null-terminates it
@@ -52,7 +64,16 @@ get_environ_value(char *arg, char *value, int idx)
 static void
 set_environ_vars(char **eargv, int eargc)
 {
-	// Your code here
+	for (int i = 0; i < eargc; i++) {
+		const int idx = block_contains(eargv[i], '=');
+		char key[idx];
+		char value[strlen(eargv[i]) - idx];
+
+		get_environ_key(eargv[i], key);
+		get_environ_value(eargv[i], value, idx);
+
+		setenv(key, value, 1);
+	}
 }
 
 // opens the file in which the stdin/stdout/stderr
@@ -100,6 +121,54 @@ perform_redirections(char *in_file, char *out_file, char *err_file)
 	}
 }
 
+noreturn void
+generate_pipeline(struct pipecmd *p, int previous_read_fd)
+{
+	struct execcmd *el = (struct execcmd *) p->leftcmd;
+	struct execcmd *er = (struct execcmd *) p->rightcmd;
+	pid_t left_child_pid;
+	pid_t right_child_pid;
+
+	int fds[2];
+	_pipe(fds);
+
+	left_child_pid = _fork();
+	if (left_child_pid == 0) {
+		set_environ_vars(el->eargv, el->eargc);
+
+		_close(fds[READ]);
+		_dup2(previous_read_fd, STDIN_FILENO);
+		_close(previous_read_fd);
+		_dup2(fds[WRITE], STDOUT_FILENO);
+		_close(fds[WRITE]);
+		_execvp(el->argv[0], el->argv);
+	}
+
+	_close(previous_read_fd);
+	_close(fds[WRITE]);
+
+	if (p->rightcmd->type == PIPE) {
+		right_child_pid = _fork();
+		if (right_child_pid == 0)
+			generate_pipeline((struct pipecmd *) p->rightcmd,
+			                  fds[READ]);
+	} else {
+		right_child_pid = _fork();
+		if (right_child_pid == 0) {
+			set_environ_vars(er->eargv, er->eargc);
+			_dup2(fds[READ], STDIN_FILENO);
+			_close(fds[READ]);
+			_execvp(er->argv[0], er->argv);
+		}
+	}
+
+	_close(fds[READ]);
+
+	_wait(NULL);
+	_wait(NULL);
+	_exit(0);
+}
+
 // executes a command - does not return
 //
 // Hint:
@@ -118,6 +187,8 @@ exec_cmd(struct cmd *cmd)
 	switch (cmd->type) {
 	case EXEC: {
 		e = (struct execcmd *) cmd;
+
+		set_environ_vars(e->eargv, e->eargc);
 
 		// const pid_t pid = _fork();
 		// if (pid == 0)
@@ -146,6 +217,8 @@ exec_cmd(struct cmd *cmd)
 		// is greater than zero
 		r = (struct execcmd *) cmd;
 
+		set_environ_vars(r->eargv, r->eargc);
+
 		// const pid_t pid = _fork();
 		// if (pid == 0) {
 		// 	perform_redirections(r->in_file, r->out_file,
@@ -161,39 +234,46 @@ exec_cmd(struct cmd *cmd)
 
 	case PIPE: {
 		p = (struct pipecmd *) cmd;
+		struct execcmd *left = (struct execcmd *) p->leftcmd;
+		struct cmd *right = p->rightcmd;
 
+		pid_t left_child_pid;
+		pid_t right_child_pid;
 		int fds[2];
 		_pipe(fds);
 
-		const pid_t pid1 = _fork();
-		if (pid1 == 0) {
+		left_child_pid = _fork();
+		if (left_child_pid == 0) {
+			set_environ_vars(left->eargv, left->eargc);
+
 			_close(fds[READ]);
 			_dup2(fds[WRITE], STDOUT_FILENO);
 			_close(fds[WRITE]);
-			_execvp(((struct execcmd *) p->leftcmd)->argv[0],
-			        ((struct execcmd *) p->leftcmd)->argv);
+			_execvp(left->argv[0], left->argv);
 		}
-		const pid_t pid2 = _fork();
-		if (pid2 == 0) {
-			_close(fds[WRITE]);
-			_dup2(fds[READ], STDIN_FILENO);
-			_close(fds[READ]);
-			_execvp(((struct execcmd *) p->rightcmd)->argv[0],
-			        ((struct execcmd *) p->rightcmd)->argv);
+
+		_close(fds[WRITE]);
+
+		if (right->type == PIPE) {
+			right_child_pid = _fork();
+			if (right_child_pid == 0)
+				generate_pipeline((struct pipecmd *) right,
+				                  fds[READ]);
+		} else {
+			right_child_pid = _fork();
+			if (right_child_pid == 0) {
+				set_environ_vars(((struct execcmd *) right)->eargv,
+				                 ((struct execcmd *) right)->eargc);
+				_dup2(fds[READ], STDIN_FILENO);
+				_close(fds[READ]);
+				_execvp(((struct execcmd *) right)->argv[0],
+				        ((struct execcmd *) right)->argv);
+			}
 		}
 
 		_close(fds[READ]);
-		_close(fds[WRITE]);
-
-		_waitpid(pid1, NULL, 0);
-		_waitpid(pid2, NULL, 0);
-
-		// free the memory allocated
-		// for the pipe tree structure
-
-		// free_command(parsed_pipe);
-
-		break;
+		_wait(NULL);
+		_wait(NULL);
 	}
 	}
 }

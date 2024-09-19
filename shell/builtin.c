@@ -7,8 +7,9 @@
 int
 exit_shell(char *cmd)
 {
-	// Your code here
-
+	if (strncmp(cmd, "exit", 4) == 0) {
+		_exit(0);
+	}
 	return 0;
 }
 
@@ -27,9 +28,49 @@ exit_shell(char *cmd)
 int
 cd(char *cmd)
 {
-	// Your code here
+	if (strncmp(cmd, "cd", 2) != 0) {
+		return 0;
+	}
 
-	return 0;
+	strtok(cmd, " ");
+	char *dir = strtok(NULL, " ");
+	if (dir == NULL || *dir == 0) {
+		dir = getenv("HOME");
+	}
+
+	if (strcmp(dir, ".") == 0)
+		return 1;
+
+
+	if (strcmp(dir, "..") == 0) {
+		char *cwd = getcwd(NULL, 0);
+
+		char *aux = NULL;
+		for (char *c = strtok(cwd, "/"); c != NULL; c = strtok(NULL, "/")) {
+			aux = c;
+		}
+
+		if (aux != NULL)
+			*aux = '\0';
+
+		strncpy(prompt, aux, strlen(cwd) > 1024 ? 1024 : strlen(cwd));
+		return 1;
+	}
+
+	if (chdir(dir) == 0) {
+		char *cwd = getcwd(NULL, 0);
+		if (cwd != NULL) {
+			strncpy(prompt,
+			        cwd,
+			        strlen(cwd) > 1024 ? 1024 : strlen(cwd));
+			free(cwd);
+		} else {
+			perror("Error in getcwd");
+		}
+		return 1;
+	}
+
+	return 1;
 }
 
 // returns true if 'pwd' was invoked
@@ -40,7 +81,12 @@ cd(char *cmd)
 int
 pwd(char *cmd)
 {
-	// Your code here
+	if (strncmp(cmd, "pdw", 3) == 0) {
+		char *cwd = getcwd(NULL, 0);
+		printf(cwd);
+		free(cwd);
+		return 1;
+	}
 
 	return 0;
 }
