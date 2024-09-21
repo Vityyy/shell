@@ -80,9 +80,9 @@ cd(char *cmd)
 int
 pwd(char *cmd)
 {
-	if (strncmp(cmd, "pdw", 3) == 0) {
+	if (strncmp(cmd, "pwd", 3) == 0) {
 		char *cwd = getcwd(NULL, 0);
-		printf(cwd);
+		printf("%s\n", cwd);
 		free(cwd);
 		return 1;
 	}
