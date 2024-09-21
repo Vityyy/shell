@@ -230,6 +230,5 @@ parse_line(char *buf)
 	else
 		r = parse_cmd(right);
 
-
 	return pipe_cmd_create(l, r);
 }

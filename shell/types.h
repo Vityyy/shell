@@ -69,6 +69,7 @@ struct pipecmd {
 	char scmd[BUFLEN];
 	struct cmd *leftcmd;
 	struct cmd *rightcmd;
+	int prev_read_fd;
 };
 
 /*

@@ -45,6 +45,12 @@ pipe_cmd_create(struct cmd *left, struct cmd *right)
 	p->type = PIPE;
 	p->leftcmd = left;
 	p->rightcmd = right;
+	p->prev_read_fd = -1;
+	/* Useful value to distinguish the first process of the pipeline.
+	The only 'node' of the tree that will mantain this value for this
+	field is the root node, aka the node used by the first coordinating
+	process. The values for this field in child nodes will be modified
+	in order to track the read end of the previous pipe in the pipeline.*/
 
 	return (struct cmd *) p;
 }
