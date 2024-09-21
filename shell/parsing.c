@@ -105,36 +105,29 @@ expand_environ_var(char *arg)
 {
 	if (arg[0] == '$') {
 		if (strcmp(arg + 1, "?") == 0) {
-			char status_str[10];
-			sprintf(status_str, "%d", status);
-			size_t status_len = strlen(status_str);
-			if (status_len > strlen(arg)) {
-				arg = realloc(arg, status_len + 1);
-			}
-			strcpy(arg, status_str);
+			// The number of characters produced are at most 12 <<
+			// 1024 = sizeof(arg). For the minimum representable we
+			// need exactly 12 characters, and for the maximum 11
+			// (both including the null terminating byte).
+			// -> ['-', '2', '1', '4', '7', '4', '8', '3', '6', '4',
+			// '8', '\0'] No realloc is needed, we write directly to
+			// arg.
+			sprintf(arg, "%d", status);
 
 		} else {
 			char *var = getenv(arg + 1);
 
-			if (var) {
-				if (*var == 0) {
-					arg[0] = '\0';
-				} else {
-					size_t var_len = strlen(var);
-					if (var_len > strlen(arg))
-						arg = realloc(arg, var_len + 1);
-					strcpy(arg, var);
-				}
-
-				// size_t var_len = strlen(var);
-				// if (var_len > strlen(arg))
-				//	arg = realloc(arg, var_len + 1);
-				// strcpy(arg, var);
+			if (!var || *var == 0) {
+				*arg = 0;
 			} else {
-				arg[0] = '\0';
+				size_t var_len = strlen(var);
+				if (var_len + 1 > sizeof(arg))
+					arg = realloc(arg, var_len + 1);
+				strcpy(arg, var);
 			}
 		}
 	}
+
 	return arg;
 }
 
