@@ -6,11 +6,6 @@
 #define ERR_FILE_FLAGS O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC
 
 /**
- * * @param p * @param previous_read_fd
- */
-noreturn void generate_pipeline(struct pipecmd *p, int previous_read_fd);
-
-/**
  * * @param in_file
  * @param out_file * @param err_file
  */
