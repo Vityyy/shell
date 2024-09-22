@@ -10,7 +10,7 @@ void print_error_and_exit(const char *message);
 
 int _pipe(int *pipefd);
 
-pid_t _fork();
+pid_t _fork(void);
 
 int _close(int fd);
 

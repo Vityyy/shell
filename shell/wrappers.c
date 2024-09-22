@@ -17,7 +17,7 @@ _pipe(int *pipefd)
 }
 
 pid_t
-_fork()
+_fork(void)
 {
 	pid_t res = fork();
 	if (res < 0)

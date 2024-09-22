@@ -1,6 +1,8 @@
 #include <libgen.h>
 #include "builtin.h"
 
+void update_prompt(void);
+
 // returns true if the 'exit' call
 // should be performed
 //
@@ -17,7 +19,7 @@ exit_shell(char *cmd)
  * Updates the prompt with the current working directory
  */
 void
-update_prompt()
+update_prompt(void)
 {
 	char *cwd = getcwd(NULL, 0);
 	snprintf(prompt, sizeof prompt, "(%s)", cwd);
