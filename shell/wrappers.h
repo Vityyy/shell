@@ -1,5 +1,5 @@
-#ifndef __WRAPPERS_H__
-#define __WRAPPERS_H__
+#ifndef WRAPPERS_H
+#define WRAPPERS_H
 
 #include <stdio.h>
 #include <unistd.h>
@@ -8,18 +8,18 @@
 
 void print_error_and_exit(const char *message);
 
-int _pipe(int *pipefd);
+int spipe(int *pipefd);
 
-pid_t _fork(void);
+pid_t sfork(void);
 
-int _close(int fd);
+int sclose(int fd);
 
-pid_t _wait(int *wstatus);
+pid_t swait(int *wstatus);
 
-pid_t _waitpid(pid_t pid, int *wstatus, int options);
+pid_t swaitpid(pid_t pid, int *wstatus, int options);
 
-int _execvp(const char *file, char *const argv[]);
+int sexecvp(const char *file, char *const argv[]);
 
-int _dup2(int oldfd, int newfd);
+int sdup2(int oldfd, int newfd);
 
-#endif /* __WRAPPERS_H__ */
+#endif  // WRAPPERS_H

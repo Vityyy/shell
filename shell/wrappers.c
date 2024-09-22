@@ -8,7 +8,7 @@ print_error_and_exit(const char *message)
 }
 
 int
-_pipe(int *pipefd)
+spipe(int *pipefd)
 {
 	int res = pipe(pipefd);
 	if (res < 0)
@@ -17,7 +17,7 @@ _pipe(int *pipefd)
 }
 
 pid_t
-_fork(void)
+sfork(void)
 {
 	pid_t res = fork();
 	if (res < 0)
@@ -26,7 +26,7 @@ _fork(void)
 }
 
 int
-_close(int fd)
+sclose(int fd)
 {
 	int res = close(fd);
 	if (res < 0)
@@ -35,7 +35,7 @@ _close(int fd)
 }
 
 pid_t
-_wait(int *wstatus)
+swait(int *wstatus)
 {
 	int res = wait(wstatus);
 	if (res < 0)
@@ -44,7 +44,7 @@ _wait(int *wstatus)
 }
 
 pid_t
-_waitpid(pid_t pid, int *wstatus, int options)
+swaitpid(pid_t pid, int *wstatus, int options)
 {
 	int res = waitpid(pid, wstatus, options);
 	if (res < 0)
@@ -53,7 +53,7 @@ _waitpid(pid_t pid, int *wstatus, int options)
 }
 
 int
-_execvp(const char *file, char *const argv[])
+sexecvp(const char *file, char *const argv[])
 {
 	int res = execvp(file, argv);
 	if (res < 0)
@@ -62,7 +62,7 @@ _execvp(const char *file, char *const argv[])
 }
 
 int
-_dup2(int oldfd, int newfd)
+sdup2(int oldfd, int newfd)
 {
 	int res = dup2(oldfd, newfd);
 	if (res < 0)

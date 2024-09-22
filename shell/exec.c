@@ -102,16 +102,16 @@ void
 perform_redirections(char *in_file, char *out_file, char *err_file)
 {
 	if (strlen(in_file) > 0)
-		_dup2(open_redir_fd(in_file, IN_FILE_FLAGS), STDIN_FILENO);
+		sdup2(open_redir_fd(in_file, IN_FILE_FLAGS), STDIN_FILENO);
 
 	if (strlen(out_file) > 0)
-		_dup2(open_redir_fd(out_file, OUT_FILE_FLAGS), STDOUT_FILENO);
+		sdup2(open_redir_fd(out_file, OUT_FILE_FLAGS), STDOUT_FILENO);
 
 	if (strlen(err_file) > 0) {
 		if (strcmp(err_file, "&1") == 0)
-			_dup2(STDOUT_FILENO, STDERR_FILENO);
+			sdup2(STDOUT_FILENO, STDERR_FILENO);
 		else
-			_dup2(open_redir_fd(err_file, ERR_FILE_FLAGS),
+			sdup2(open_redir_fd(err_file, ERR_FILE_FLAGS),
 			      STDERR_FILENO);
 	}
 }
@@ -137,7 +137,7 @@ exec_cmd(struct cmd *cmd)
 
 		set_environ_vars(e->eargv, e->eargc);
 
-		_execvp(e->argv[0], e->argv);
+		sexecvp(e->argv[0], e->argv);
 
 		break;
 	}
@@ -163,7 +163,7 @@ exec_cmd(struct cmd *cmd)
 
 		perform_redirections(r->in_file, r->out_file, r->err_file);
 
-		_execvp(r->argv[0], r->argv);
+		sexecvp(r->argv[0], r->argv);
 
 		break;
 	}
@@ -172,37 +172,37 @@ exec_cmd(struct cmd *cmd)
 		p = (struct pipecmd *) cmd;
 		int prfd = p->prev_read_fd;
 		int fds[2];
-		_pipe(fds);
+		spipe(fds);
 
-		if (_fork() == 0) {
+		if (sfork() == 0) {
 			if (prfd >= 0) {
-				_dup2(prfd, STDIN_FILENO);
-				_close(prfd);
+				sdup2(prfd, STDIN_FILENO);
+				sclose(prfd);
 			}
-			_dup2(fds[WRITE], STDOUT_FILENO);
-			_close(fds[WRITE]);
-			_close(fds[READ]);
+			sdup2(fds[WRITE], STDOUT_FILENO);
+			sclose(fds[WRITE]);
+			sclose(fds[READ]);
 			exec_cmd(p->leftcmd);
 		}
 
 		if (prfd >= 0)
-			_close(prfd);
-		_close(fds[WRITE]);
+			sclose(prfd);
+		sclose(fds[WRITE]);
 
-		if (_fork() == 0) {
+		if (sfork() == 0) {
 			if (p->rightcmd->type != PIPE) {
-				_dup2(fds[READ], STDIN_FILENO);
-				_close(fds[READ]);
+				sdup2(fds[READ], STDIN_FILENO);
+				sclose(fds[READ]);
 			} else
 				((struct pipecmd *) p->rightcmd)->prev_read_fd =
 				        fds[READ];
 			exec_cmd(p->rightcmd);
 		}
 
-		_close(fds[READ]);
+		sclose(fds[READ]);
 
-		_wait(NULL);
-		_wait(NULL);
+		swait(NULL);
+		swait(NULL);
 		_exit(EXIT_SUCCESS);
 	}
 	}
