@@ -1,12 +1,7 @@
 #ifndef WRAPPERS_H
 #define WRAPPERS_H
 
-#include <stdio.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <sys/wait.h>
-
-void print_error_and_exit(const char *message);
 
 int spipe(int *pipefd);
 

@@ -1,5 +1,11 @@
 #include "wrappers.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+
+void print_error_and_exit(const char *message);
+
 void
 print_error_and_exit(const char *message)
 {
