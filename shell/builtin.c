@@ -1,3 +1,4 @@
+#include <libgen.h>
 #include "builtin.h"
 
 // returns true if the 'exit' call
@@ -10,6 +11,17 @@ exit_shell(char *cmd)
 	if (strncmp(cmd, "exit", 4) == 0)
 		return 1;
 	return 0;
+}
+
+/**
+ * Updates the prompt with the current working directory
+ */
+void
+update_prompt()
+{
+	char *cwd = getcwd(NULL, 0);
+	snprintf(prompt, sizeof prompt, "(%s)", cwd);
+	free(cwd);
 }
 
 // returns true if "chdir" was performed
@@ -27,47 +39,43 @@ exit_shell(char *cmd)
 int
 cd(char *cmd)
 {
-	if (strncmp(cmd, "cd", 2) != 0) {
+	if (strncmp(cmd, "cd", 2) != 0)
 		return 0;
-	}
+
 
 	strtok(cmd, " ");
 	char *dir = strtok(NULL, " ");
-	if (dir == NULL || *dir == 0) {
+	bool free_dir = false;
+
+	if (dir == NULL || *dir == '\0')
 		dir = getenv("HOME");
-	}
 
-	if (strcmp(dir, ".") == 0)
+	else if (strcmp(dir, ".") == 0)
 		return 1;
 
+	else if (strcmp(dir, "..") == 0) {
+		dir = getcwd(NULL, 0);
 
-	if (strcmp(dir, "..") == 0) {
-		char *cwd = getcwd(NULL, 0);
-
-		char *aux = NULL;
-		for (char *c = strtok(cwd, "/"); c != NULL; c = strtok(NULL, "/")) {
-			aux = c;
+		if (strcmp(dir, "/") == 0) {
+			free(dir);
+			return 1;
 		}
 
-		if (aux != NULL)
-			*aux = '\0';
+		dir = dirname(dir);
 
-		strncpy(prompt, aux, strlen(cwd) > 1024 ? 1024 : strlen(cwd));
+		free_dir = true;
+	}
+
+
+	if (chdir(dir) == -1) {
+		perror("cd");
 		return 1;
 	}
 
-	if (chdir(dir) == 0) {
-		char *cwd = getcwd(NULL, 0);
-		if (cwd != NULL) {
-			strncpy(prompt,
-			        cwd,
-			        strlen(cwd) > 1024 ? 1024 : strlen(cwd));
-			free(cwd);
-		} else {
-			perror("Error in getcwd");
-		}
-		return 1;
-	}
+	update_prompt();
+
+	if (free_dir)
+		free(dir);
 
 	return 1;
 }
