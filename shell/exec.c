@@ -203,6 +203,7 @@ exec_cmd(struct cmd *cmd)
 
 		swait(NULL);
 		swait(NULL);
+		free_command(parsed_pipe);
 		_exit(EXIT_SUCCESS);
 	}
 	}
