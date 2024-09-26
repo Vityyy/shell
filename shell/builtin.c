@@ -70,6 +70,9 @@ cd(char *cmd)
 
 
 	if (chdir(dir) == -1) {
+		if (free_dir)
+			free(dir);
+
 		perror("cd");
 		return 1;
 	}

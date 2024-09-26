@@ -144,10 +144,9 @@ exec_cmd(struct cmd *cmd)
 
 	case BACK: {
 		// runs a command in background
-		//
-		// Your code here
-		printf("Background process are not yet implemented\n");
-		_exit(-1);
+		b = (struct backcmd *) cmd;
+		exec_cmd(b->c);
+
 		break;
 	}
 
@@ -175,6 +174,9 @@ exec_cmd(struct cmd *cmd)
 		spipe(fds);
 
 		if (sfork() == 0) {
+			if (p->leftcmd->type != BACK)
+				setpgid(0, 0);
+
 			if (prfd >= 0) {
 				sdup2(prfd, STDIN_FILENO);
 				sclose(prfd);
@@ -190,6 +192,9 @@ exec_cmd(struct cmd *cmd)
 		sclose(fds[WRITE]);
 
 		if (sfork() == 0) {
+			if (p->leftcmd->type != BACK)
+				setpgid(0, 0);
+
 			if (p->rightcmd->type != PIPE) {
 				sdup2(fds[READ], STDIN_FILENO);
 				sclose(fds[READ]);
