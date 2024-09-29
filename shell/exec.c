@@ -137,21 +137,17 @@ exec_cmd(struct cmd *cmd)
 
 		set_environ_vars(e->eargv, e->eargc);
 
-		sexecvp(e->argv[0], e->argv);
+		execvp(e->argv[0], e->argv);
 
 		free_command(parsed);
 		free(ss.ss_sp);
 		_exit(EXIT_FAILURE);
-
-		break;
 	}
 
 	case BACK: {
 		// runs a command in background
 		b = (struct backcmd *) cmd;
 		exec_cmd(b->c);
-
-		break;
 	}
 
 	case REDIR: {
@@ -166,13 +162,11 @@ exec_cmd(struct cmd *cmd)
 
 		perform_redirections(r->in_file, r->out_file, r->err_file);
 
-		sexecvp(r->argv[0], r->argv);
+		execvp(r->argv[0], r->argv);
 
 		free_command(parsed);
 		free(ss.ss_sp);
 		_exit(EXIT_FAILURE);
-
-		break;
 	}
 
 	case PIPE: {

@@ -25,14 +25,17 @@ itoa(int num)
 {
 	int i = 0;
 
-	for (int a = num; a != 0; i++)
-		a /= 10;
+	if (num == 0)
+		i = 1;
+	else
+		for (int a = num; a != 0; i++)
+			a /= 10;
 
 	char *s = malloc(i + 1);
 	s[i] = 0;
 
 	for (int a = num; i != 0; i--) {
-		s[i - 1] = (a % 10) + 48;
+		s[i - 1] = (char) ((a % 10) + 48);
 		a /= 10;
 	}
 
