@@ -1,14 +1,13 @@
 #include "runcmd.h"
 
 int status = 0;
-struct cmd *parsed_pipe;
+struct cmd *parsed;
 
 // runs the command in 'cmd'
 int
 run_cmd(char *cmd)
 {
 	pid_t p;
-	struct cmd *parsed;
 
 	// if the "enter" key is pressed
 	// just print the prompt again
@@ -36,12 +35,6 @@ run_cmd(char *cmd)
 
 	// forks and run the command
 	if ((p = fork()) == 0) {
-		// keep a reference
-		// to the parsed pipe cmd
-		// so it can be freed later
-		if (parsed->type == PIPE)
-			parsed_pipe = parsed;
-
 		if (parsed->type != BACK)
 			setpgid(0, 0);
 
@@ -63,7 +56,6 @@ run_cmd(char *cmd)
 		waitpid(p, &status, 0);  // waits for the process to finish
 		print_status_info(parsed);
 	}
-
 
 	free_command(parsed);
 

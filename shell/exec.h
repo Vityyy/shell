@@ -7,7 +7,8 @@
 #include "freecmd.h"
 #include "wrappers.h"
 
-extern struct cmd *parsed_pipe;
+extern struct cmd *parsed;
+extern stack_t ss;
 
 void exec_cmd(struct cmd *c);
 

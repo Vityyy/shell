@@ -7,7 +7,7 @@ void sigchild_handler(int signum);
 
 char prompt[PRMTLEN] = { 0 };
 
-pid_t shell_pid;
+stack_t ss = { 0 };
 
 // runs a shell command
 static void
@@ -20,6 +20,39 @@ run_shell()
 			return;
 }
 
+char *
+itoa(int num)
+{
+	int i = 0;
+
+	for (int a = num; a != 0; i++)
+		a /= 10;
+
+	char *s = malloc(i + 1);
+	s[i] = 0;
+
+	for (int a = num; i != 0; i--) {
+		s[i - 1] = (a % 10) + 48;
+		a /= 10;
+	}
+
+	return s;
+}
+
+void
+print_status(pid_t pid, int local_status)
+{
+	char *str_num = itoa(pid);
+	write(STDOUT_FILENO, "PID: ", 5);
+	write(STDOUT_FILENO, str_num, strlen(str_num));
+	free(str_num);
+	write(STDOUT_FILENO, " STATUS: ", 9);
+	str_num = itoa(local_status);
+	write(STDOUT_FILENO, str_num, strlen(str_num));
+	free(str_num);
+	write(STDOUT_FILENO, " finished\n", 10);
+}
+
 void
 sigchild_handler(const int signum)
 {
@@ -29,9 +62,8 @@ sigchild_handler(const int signum)
 	if (pid <= 0)
 		return;
 
-	fprintf(stdout, "PID: %d STATUS: %d finished\n", pid, status);
+	print_status(pid, local_status);
 }
-
 
 // initializes the shell
 // with the "HOME" directory
@@ -48,21 +80,24 @@ init_shell()
 		snprintf(prompt, sizeof prompt, "(%s)", home);
 	}
 
+	ss.ss_sp = malloc(SIGSTKSZ);
+	ss.ss_size = SIGSTKSZ;
+	sigaltstack(&ss, NULL);
 
 	sigaction(SIGCHLD,
 	          &(struct sigaction){ .sa_handler = sigchild_handler,
-	                               .sa_flags = SA_RESTART },
+	                               .sa_flags = SA_RESTART | SA_ONSTACK },
 	          NULL);
 }
 
 int
 main(void)
 {
-	shell_pid = getpid();
-
 	init_shell();
 
 	run_shell();
+
+	free(ss.ss_sp);
 
 	return 0;
 }
