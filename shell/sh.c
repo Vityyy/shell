@@ -3,10 +3,11 @@
 #include "readline.h"
 #include "runcmd.h"
 
+char *itoa_safe(int num, char *buf, size_t buf_size);
+void print_status(pid_t pid, int local_status);
 void sigchild_handler(int signum);
 
 char prompt[PRMTLEN] = { 0 };
-
 stack_t ss = { 0 };
 
 // runs a shell command
@@ -21,38 +22,45 @@ run_shell()
 }
 
 char *
-itoa(int num)
+itoa_safe(int num, char *buf, size_t buf_size)
 {
-	int i = 0;
+	int i = buf_size - 1;
+	buf[i] = 0;
 
-	if (num == 0)
-		i = 1;
-	else
-		for (int a = num; a != 0; i++)
-			a /= 10;
+	if (num == 0) {
+		buf[i - 1] = '0';
+		return buf + i - 1;
+	}
 
-	char *s = malloc(i + 1);
-	s[i] = 0;
+	i--;
 
-	for (int a = num; i != 0; i--) {
-		s[i - 1] = (char) ((a % 10) + 48);
+	for (int a = abs(num); a != 0; i--) {
+		buf[i] = (char) ((a % 10) + 48);
 		a /= 10;
 	}
 
-	return s;
+	if (num < 0) {
+		buf[i] = '-';
+		return buf + i;
+	}
+
+	return buf + i + 1;
 }
 
 void
 print_status(pid_t pid, int local_status)
 {
-	char *str_num = itoa(pid);
+	char pid_buf[13];     // Enough for 32-bit int
+	char status_buf[13];  // Enough for 32-bit int
+	char *pid_str;
+	char *status_str;
+
 	write(STDOUT_FILENO, "PID: ", 5);
-	write(STDOUT_FILENO, str_num, strlen(str_num));
-	free(str_num);
+	pid_str = itoa_safe(pid, pid_buf, 13);
+	write(STDOUT_FILENO, pid_str, strlen(pid_str));
 	write(STDOUT_FILENO, " STATUS: ", 9);
-	str_num = itoa(local_status);
-	write(STDOUT_FILENO, str_num, strlen(str_num));
-	free(str_num);
+	status_str = itoa_safe(local_status, status_buf, 13);
+	write(STDOUT_FILENO, status_str, strlen(status_str));
 	write(STDOUT_FILENO, " finished\n", 10);
 }
 
