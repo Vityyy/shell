@@ -187,9 +187,6 @@ exec_cmd(struct cmd *cmd)
 			sclose(fds[WRITE]);
 			sclose(fds[READ]);
 			exec_cmd(p->leftcmd);
-			free_command(parsed);
-			free(ss.ss_sp);
-			_exit(EXIT_FAILURE);
 		}
 
 		if (prfd >= 0)
@@ -207,9 +204,6 @@ exec_cmd(struct cmd *cmd)
 				((struct pipecmd *) p->rightcmd)->prev_read_fd =
 				        fds[READ];
 			exec_cmd(p->rightcmd);
-			free_command(parsed);
-			free(ss.ss_sp);
-			_exit(EXIT_FAILURE);
 		}
 
 		sclose(fds[READ]);
