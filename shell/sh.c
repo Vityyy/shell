@@ -96,8 +96,8 @@ init_shell()
 	sigaltstack(&ss, NULL);
 
 	sigaction(SIGCHLD,
-	          &(struct sigaction){ .sa_handler = sigchild_handler,
-	                               .sa_flags = SA_RESTART | SA_ONSTACK },
+	          &(struct sigaction) { .sa_handler = sigchild_handler,
+	                                .sa_flags = SA_RESTART | SA_ONSTACK },
 	          NULL);
 }
 
